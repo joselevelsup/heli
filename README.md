@@ -1,5 +1,9 @@
 # heli
 
+> ⚠️ **NOT YET PUBLISHED** — this extension is still in development and has not
+> been published to the VS Code / VSCodium Marketplace. To use it, build and
+> install the `.vsix` locally (see [Develop](#develop)).
+
 Helix-style modal keybindings for VS Code. Modal editing with Helix's
 **select-first** model, a `:` command line, a `Space` leader layer, match mode
 with surround & text objects, `Ctrl-w` window management, settings.json
