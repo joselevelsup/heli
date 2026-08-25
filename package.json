@@ -1,0 +1,257 @@
+{
+  "name": "heli",
+  "displayName": "heli",
+  "description": "Helix-style modal keybindings for VS Code",
+  "version": "0.0.1",
+  "license": "MIT",
+  "publisher": "joselevelsup",
+  "engines": {
+    "vscode": "^1.126.0"
+  },
+  "categories": [
+    "Other",
+    "Keymaps"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "heli.toggle",
+        "title": "heli: Toggle Helix keybindings"
+      },
+      {
+        "command": "heli.reloadConfig",
+        "title": "heli: Reload keybindings"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "heli",
+        "properties": {
+          "heli.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable helix modal keybinding interception. When off, typing uses VS Code's default behavior."
+          },
+          "heli.keybindings": {
+            "type": "object",
+            "default": {},
+            "markdownDescription": "Custom key remaps. Object with `normal`, `select`, and/or `insert` keys; each maps a key sequence to an action name. Sequences concatenate tokens (e.g. `gg`, `<space>f`, `<C-w>v`). Special keys: `<space>` `<esc>` `<cr>` `<bs>` `<del>` `<up>` `<down>` `<left>` `<right>` `<home>` `<end>` `<pageup>` `<pagedown>` `<C-w>` `<C-d>` `<C-u>`. Example: `{ \"normal\": { \"gg\": \"goto_start\", \"<space>f\": \"leader_file\" } }`. Changes apply on save; or run **heli: Reload keybindings**."
+          },
+          "heli.modeIndicatorColors": {
+            "type": "boolean",
+            "default": true,
+            "description": "Color the status bar mode indicator per mode (NOR/INS/SEL)."
+          },
+          "heli.whichKey": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show a which-key popup when a prefix key is pressed (`g`, `m`, `z`, `Z`, `Space`, `Ctrl-w`) listing the possible next keys and their actions."
+          }
+        }
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "heli.key",
+        "key": "escape",
+        "args": "<esc>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'insert' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "enter",
+        "args": "<cr>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "backspace",
+        "args": "<bs>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "delete",
+        "args": "<del>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "left",
+        "args": "<left>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "right",
+        "args": "<right>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "up",
+        "args": "<up>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "down",
+        "args": "<down>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "home",
+        "args": "<home>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "end",
+        "args": "<end>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "pageUp",
+        "args": "<pageup>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "pageDown",
+        "args": "<pagedown>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "ctrl+w",
+        "args": "<C-w>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "ctrl+d",
+        "args": "<C-d>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "ctrl+u",
+        "args": "<C-u>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "ctrl+o",
+        "args": "<C-o>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "heli.key",
+        "key": "ctrl+i",
+        "args": "<C-i>",
+        "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
+      },
+      {
+        "command": "list.focusDown",
+        "key": "j",
+        "when": "(filesExplorerFocus || listFocus) && !inputFocus"
+      },
+      {
+        "command": "list.focusUp",
+        "key": "k",
+        "when": "(filesExplorerFocus || listFocus) && !inputFocus"
+      },
+      {
+        "command": "list.collapse",
+        "key": "h",
+        "when": "(filesExplorerFocus || listFocus) && !inputFocus"
+      },
+      {
+        "command": "list.expand",
+        "key": "l",
+        "when": "(filesExplorerFocus || listFocus) && !inputFocus"
+      },
+      {
+        "command": "explorer.openAndPassFocus",
+        "key": "enter",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "explorer.newFile",
+        "key": "n",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "explorer.newFolder",
+        "key": "shift+n",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "deleteFile",
+        "key": "d",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "renameFile",
+        "key": "r",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "filesExplorer.copy",
+        "key": "y",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "filesExplorer.paste",
+        "key": "p",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "workbench.files.action.collapseExplorerFolders",
+        "key": "shift+h",
+        "when": "filesExplorerFocus && !inputFocus"
+      },
+      {
+        "command": "workbench.files.action.refreshFilesExplorer",
+        "key": "shift+r",
+        "when": "filesExplorerFocus && !inputFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.126.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "typescript-eslint": "^8.61.1",
+    "eslint": "^10.5.1",
+    "esbuild": "^0.28.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^6.0.3",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  }
+}
