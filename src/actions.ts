@@ -412,7 +412,8 @@ function openBelow(ctx: Ctx): void {
 		for (const s of ed.selections) {
 			const line = ed.document.lineAt(s.active.line);
 			b.insert(line.range.end, '\n'.repeat(ctx.count));
-			positions.push(line.range.end);
+			// cursor goes to the start of the first new line (one line below)
+			positions.push(new vscode.Position(line.range.end.line + 1, 0));
 		}
 	}).then(() => {
 		ed.selections = positions.map(p => new vscode.Selection(p, p));
