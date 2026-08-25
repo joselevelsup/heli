@@ -81,6 +81,15 @@ suite('parity: motions & operators', () => {
 		assert.equal(ed.document.getText(), 'def\nghi');
 	});
 
+	test('d on a bare cursor deletes the char under it (Helix 1-char selection)', async () => {
+		const ed = await setupDoc('hello');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 1), new vscode.Position(0, 1));
+		run(ed, 'delete');
+		await settle(ed);
+		assert.equal(ed.document.getText(), 'hllo');
+		assert.equal(ed.selection.active.character, 1); // cursor stays at deletion point
+	});
+
 	test('yank then paste_after duplicates text', async () => {
 		const ed = await setupDoc('foo bar');
 		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 3));

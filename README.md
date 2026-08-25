@@ -133,8 +133,9 @@ Changes apply automatically when you save `settings.json`, or run the
 
 ## Known gaps / intentionally different
 
-- **`d`/`y` on a bare cursor are no-ops** (faithful to Helix's select-first).
-  Use `x` (line) or `mi`/`ma` (text object) first. Helix has no operator+motion.
+- **`d`/`c`/`y` on a bare cursor act on the character under it** (Helix treats
+  a cursor as a 1-char selection). Select first (`x`, `mi`/`ma`, a motion) to
+  operate on a larger range. Helix has no operator+motion.
 - **No insert-session undo coalescing** — each edit is one VS Code undo step
   (Helix coalesces an insert session into one step).
 - **Macros are a single slot**, not per-register.

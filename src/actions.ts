@@ -259,6 +259,7 @@ async function selectInSelection(ctx: Ctx, split: boolean): Promise<void> {
 	catch (e) { void vscode.window.showWarningMessage(`heli: bad regex: ${(e as Error).message}`); return; }
 	const doc = ed.document.getText();
 	const newSels: vscode.Selection[] = [];
+	const matchCap = 100000; // ponytail: guard against ReDoS / runaway matches
 	for (const s of ed.selections) {
 		const startOff = ed.document.offsetAt(s.start);
 		const endOff = ed.document.offsetAt(s.end);
@@ -266,7 +267,12 @@ async function selectInSelection(ctx: Ctx, split: boolean): Promise<void> {
 		re.lastIndex = 0;
 		let m: RegExpExecArray | null;
 		let last = 0;
+		let matchCount = 0;
 		while ((m = re.exec(text)) !== null) {
+			if (++matchCount > matchCap) {
+				void vscode.window.showWarningMessage('heli: regex matched too many times (capped at 100k)');
+				return;
+			}
 			const mStart = startOff + m.index;
 			const mEnd = mStart + m[0].length;
 			if (split) {
@@ -293,8 +299,13 @@ const splitSelection = (ctx: Ctx) => { void selectInSelection(ctx, true); };
 // --- operators --------------------------------------------------------------
 function deleteOp(ctx: Ctx): void {
 	const ed = ctx.editor;
+	// Helix: a bare cursor is a 1-char selection — delete the char under it.
 	const ranges = ed.selections.map(s => {
-		if (s.isEmpty) {return null;} // Helix: d on a bare cursor is a no-op
+		if (s.isEmpty) {
+			const line = ed.document.lineAt(s.active.line);
+			if (s.active.isEqual(line.range.end)) { return null; } // nothing at line end
+			return new vscode.Selection(s.active, s.active.translate(0, 1));
+		}
 		return s;
 	}).filter(Boolean) as vscode.Selection[];
 	if (ranges.length === 0) {return;}
@@ -313,7 +324,15 @@ function deleteOp(ctx: Ctx): void {
 
 function changeOp(ctx: Ctx): void {
 	const ed = ctx.editor;
-	const ranges = ed.selections;
+	// Helix: a bare cursor is a 1-char selection — change the char under it.
+	const ranges = ed.selections.map(s => {
+		if (s.isEmpty) {
+			const line = ed.document.lineAt(s.active.line);
+			if (s.active.isEqual(line.range.end)) { return s; } // nothing to change at line end
+			return new vscode.Selection(s.active, s.active.translate(0, 1));
+		}
+		return s;
+	});
 	const text = ranges.map(r => ed.document.getText(r)).join('');
 	if (text) {void setReg(ctx.register, text, isLinewise(text));}
 	void edit(ed, b => {
@@ -329,12 +348,14 @@ function changeOp(ctx: Ctx): void {
 
 function yankOp(ctx: Ctx): void {
 	const ed = ctx.editor;
+	// Helix: a bare cursor is a 1-char selection — yank the char under it.
 	for (const s of ed.selections) {
 		let text: string, linewise: boolean;
 		if (s.isEmpty) {
 			const line = ed.document.lineAt(s.active.line);
-			text = ed.document.getText(line.rangeIncludingLineBreak);
-			linewise = true;
+			if (s.active.isEqual(line.range.end)) { continue; } // nothing at line end
+			text = ed.document.getText(new vscode.Range(s.active, s.active.translate(0, 1)));
+			linewise = false;
 		} else {
 			text = ed.document.getText(s);
 			linewise = isLinewise(text);

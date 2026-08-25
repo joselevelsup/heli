@@ -163,7 +163,8 @@ export function processKey(token: string, replay = false): void {
 
 	const map = effectiveKeymap[mode.current];
 	const actionName = map[keyBuf];
-	const count = countStr ? parseInt(countStr, 10) : 1;
+	const rawCount = countStr ? parseInt(countStr, 10) : 1;
+	const count = Math.min(Math.max(1, rawCount), 9999); // ponytail: cap to avoid editor freeze on huge counts
 	if (actionName) {
 		commitAction(actionName, count, pendingRegister ?? '"');
 		return;
