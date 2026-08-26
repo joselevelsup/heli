@@ -672,6 +672,84 @@ const navigateForward = execVsCmd('workbench.action.navigateForward');
 // `workbench.view.explorer` reveals AND focuses the explorer tree.
 const toggleExplorer = execVsCmd('workbench.view.explorer');
 
+// --- buffer search (/ n N) — pure heli, no VS Code find widget ------------
+// ponytail: linear scan per cursor. Fine for normal use; upgrade to a
+// precomputed match list if giant-file search feels slow.
+let lastSearch: { query: string; regex: boolean } | null = null;
+
+function doSearch(ctx: Ctx, forward: boolean): void {
+	if (!lastSearch) { return; }
+	const ed = ctx.editor;
+	const doc = ed.document.getText();
+	const flags = lastSearch.regex ? 'g' : 'gi';
+	let pattern: string;
+	if (lastSearch.regex) {
+		pattern = lastSearch.query;
+	} else {
+		pattern = lastSearch.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	}
+	let re: RegExp;
+	try { re = new RegExp(pattern, flags); }
+	catch { return; }
+
+	ed.selections = ed.selections.map(s => {
+		const curOff = ed.document.offsetAt(s.active);
+		const startOff = ed.document.offsetAt(s.start);
+		let match: RegExpExecArray | null;
+		if (forward) {
+			re.lastIndex = curOff + 1; // search after current position (after the end of current selection)
+			match = re.exec(doc);
+			if (!match) { // wrap around
+				re.lastIndex = 0;
+				match = re.exec(doc);
+			}
+		} else {
+			// backward: scan all matches before the START of the current selection, take the last
+			re.lastIndex = 0;
+			let last: RegExpExecArray | null = null;
+			while ((match = re.exec(doc)) !== null) {
+				if (match.index >= startOff) { break; }
+				last = match;
+			}
+			match = last;
+			if (!match) { // wrap around — find the last match in the whole doc
+				re.lastIndex = 0;
+				while ((match = re.exec(doc)) !== null) {
+					last = match;
+				}
+				match = last;
+			}
+		}
+		if (match) {
+			const start = ed.document.positionAt(match.index);
+			const end = ed.document.positionAt(match.index + match[0].length);
+			return new vscode.Selection(start, end); // select the match (Helix select-first)
+		}
+		return s; // no match found, keep current selection
+	});
+	revealActive(ed);
+}
+
+async function searchBuffer(ctx: Ctx): Promise<void> {
+	const query = await vscode.window.showInputBox({
+		prompt: 'Search in buffer',
+		placeHolder: 'text or /regex/…',
+	});
+	if (query === undefined || query === '') { return; }
+	// /pattern/ syntax = regex; plain text = literal
+	let regex = false;
+	let actualQuery = query;
+	if (query.length >= 3 && query.startsWith('/') && query.endsWith('/')) {
+		regex = true;
+		actualQuery = query.slice(1, -1);
+	}
+	lastSearch = { query: actualQuery, regex };
+	doSearch(ctx, true); // jump to first match immediately
+}
+
+const searchNext = (ctx: Ctx) => doSearch(ctx, true);
+const searchPrev = (ctx: Ctx) => doSearch(ctx, false);
+
 // --- escape (collapse to head) ----------------------------------------------
 export function escapeToNormal(ctx: Ctx): void {
 	const ed = ctx.editor;
@@ -764,6 +842,9 @@ export const actions: Record<string, Action> = {
 	navigate_back: navigateBack,
 	navigate_forward: navigateForward,
 	toggle_explorer: toggleExplorer,
+	search_buffer: searchBuffer,
+	search_next: searchNext,
+	search_prev: searchPrev,
 };
 
 // Actions that capture the next N typed keys as arguments (find/till/surround/text-objects).

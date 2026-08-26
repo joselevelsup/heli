@@ -26,6 +26,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		o: 'open_below', O: 'open_above',
 		u: 'undo', U: 'redo',
 		'>': 'indent', '<': 'outdent',
+		'/': 'search_buffer', 'n': 'search_next', 'N': 'search_prev',
 		// g prefix (Phase 6)
 		'gd': 'goto_definition', 'gD': 'goto_type_definition', 'gr': 'goto_references',
 		'gh': 'line_start', 'gl': 'line_end', 'gs': 'line_first_nonws',
@@ -72,6 +73,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		o: 'open_below', O: 'open_above',
 		u: 'undo', U: 'redo',
 		'>': 'indent', '<': 'outdent',
+		'/': 'search_buffer', 'n': 'search_next', 'N': 'search_prev',
 		'mm': 'match_bracket',
 		'ms': 'surround_add', 'mr': 'surround_replace', 'md': 'surround_delete',
 		'mi': 'text_object_inner', 'ma': 'text_object_around',
@@ -122,6 +124,7 @@ export const descriptions: Record<string, string> = {
 	next_editor: 'next buffer', prev_editor: 'prev buffer',
 	navigate_back: 'jump back', navigate_forward: 'jump forward',
 	toggle_explorer: 'toggle file explorer',
+	search_buffer: 'search in buffer', search_next: 'next match', search_prev: 'prev match',
 	surround_add: 'surround add', surround_replace: 'surround replace', surround_delete: 'surround delete',
 	text_object_inner: 'select inside', text_object_around: 'select around',
 };

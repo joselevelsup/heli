@@ -36,7 +36,7 @@ pending sequence). `v` toggles Select. The indicator is colored per mode when
 |-------|------|------|
 | 1 | Mode engine | `NOR/INS/SEL` indicator, `helix.mode` context key, cursor style |
 | 1 | Insert slice | `i a I A o O`, `Esc` |
-| 2 | Motions | `h j k l`, `w b e`, `W B E`, `0 ^ $` (`Home`/`End`), `gg G ge`, `{ }`, `%`, `mm`, `Ctrl-d`/`Ctrl-u` half-page, count (`3w`, `12G`) |
+| 2 | Motions | `h j k l`, `w b e`, `W B E`, `0 ^ $` (`Home`/`End`), `gg G ge`, `{ }`, `%`, `mm`, `/` search buffer, `n`/`N` next/prev match, `Ctrl-d`/`Ctrl-u` half-page, count (`3w`, `12G`) |
 | 2 | Find/till | `f F t T <char>`, `;` `,` |
 | 2 | Selections | `x` line, `X` extend up, `%` whole buffer, `v` toggle select, `s` select matches, `S` split, `,` collapse cursors, VS Code multi-cursor composes |
 | 3 | Operators | `d c y p P`, registers `"<reg>`, `>`/`<` indent/outdent |

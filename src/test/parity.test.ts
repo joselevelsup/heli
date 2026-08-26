@@ -205,6 +205,29 @@ suite('parity: insert entries', () => {
 	});
 });
 
+suite('parity: buffer search (/ n N) — issue #9', () => {
+	test('/ then n jumps to next match, N goes back', async () => {
+		const ed = await setupDoc('foo bar foo baz foo');
+		// offset:  f0 o1 o2 sp3 b4 a5 r6 sp7 f8 o9 o10 sp11 b12 a13 z14 sp15 f16 o17 o18
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		await withInputBox(() => Promise.resolve('foo'), async () => {
+			run(ed, 'search_buffer');
+			await settle(ed);
+		});
+		// first match forward from offset 1 -> 'foo' at offset 8 (skips the one at 0)
+		assert.equal(ed.document.getText(ed.selection), 'foo');
+		assert.equal(ed.selection.start.character, 8);
+		// n -> next match at offset 16
+		run(ed, 'search_next');
+		await settle(ed);
+		assert.equal(ed.selection.start.character, 16);
+		// N -> back to offset 8
+		run(ed, 'search_prev');
+		await settle(ed);
+		assert.equal(ed.selection.start.character, 8);
+	});
+});
+
 suite('parity: select-in-selection (s) — issue #1', () => {
 	test('s creates one selection per regex match within the selection', async () => {
 		const ed = await setupDoc('foo bar baz');
