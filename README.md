@@ -42,7 +42,7 @@ pending sequence). `v` toggles Select. The indicator is colored per mode when
 | 3 | Operators | `d c y p P`, registers `"<reg>`, `>`/`<` indent/outdent |
 | 3 | Undo/redo | `u U` |
 | 4 | Command mode | `:w :write :q :quit :wq :x :o/:open <path> :new :bd/:buffer-close :reload :source :set :help` |
-| 5 | Leader | `Space f` files, `Space b` buffers, `Space e` toggle explorer, `Space s` symbols, `Space Space` search |
+| 5 | Leader | `Space f` files, `Space b` buffers, `Space e` toggle explorer, `Space c` toggle comment, `Space k` hover, `Space s` symbols, `Space Space` search |
 | 6 | Goto / view | `gd gD gr gh gl gs`, `gg` top, `ge` end, `gn`/`gp` next/prev buffer, `K` hover, `Ctrl-o`/`Ctrl-i` jump back/forward, `zz zt zb` (sticky `Zt Zb Zz`) |
 | 7 | Match mode | `mm` match bracket, `ms<char>` surround add, `mr<from><to>` replace, `md<char>` delete, `mi<obj>` inner, `ma<obj>` around |
 | 7 | Text objects | `w W p ( ) [ ] { } < > " ' \`` |

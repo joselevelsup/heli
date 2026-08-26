@@ -689,6 +689,9 @@ const navigateForward = execVsCmd('workbench.action.navigateForward');
 // `workbench.view.explorer` reveals AND focuses the explorer tree.
 const toggleExplorer = execVsCmd('workbench.view.explorer');
 
+// --- comment toggle (Space-c) ---------------------------------------------
+const toggleComment = execVsCmd('editor.action.commentLine');
+
 // --- buffer search (/ n N) — pure heli, no VS Code find widget ------------
 // ponytail: linear scan per cursor. Fine for normal use; upgrade to a
 // precomputed match list if giant-file search feels slow.
@@ -859,6 +862,7 @@ export const actions: Record<string, Action> = {
 	navigate_back: navigateBack,
 	navigate_forward: navigateForward,
 	toggle_explorer: toggleExplorer,
+	toggle_comment: toggleComment,
 	search_buffer: searchBuffer,
 	search_next: searchNext,
 	search_prev: searchPrev,

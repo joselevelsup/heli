@@ -41,6 +41,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		// space leader (Phase 5)
 		'<space>f': 'leader_file', '<space>b': 'leader_buffer',
 		'<space>e': 'toggle_explorer',
+		'<space>c': 'toggle_comment',
 		'<space>k': 'hover',
 		'<space>s': 'leader_symbol', '<space><space>': 'leader_search',
 		// window mode Ctrl-w (Phase 8)
@@ -80,6 +81,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		'mi': 'text_object_inner', 'ma': 'text_object_around',
 		'gd': 'goto_definition', 'gh': 'line_start', 'gl': 'line_end', 'gs': 'line_first_nonws', K: 'hover',
 		'<space>k': 'hover',
+		'<space>c': 'toggle_comment',
 		'<space>e': 'toggle_explorer',
 		'zz': 'reveal_center', 'zt': 'reveal_top', 'zb': 'reveal_bottom',
 		'<C-d>': 'scroll_down', '<C-u>': 'scroll_up',
@@ -126,6 +128,7 @@ export const descriptions: Record<string, string> = {
 	next_editor: 'next buffer', prev_editor: 'prev buffer',
 	navigate_back: 'jump back', navigate_forward: 'jump forward',
 	toggle_explorer: 'toggle file explorer',
+	toggle_comment: 'toggle comment',
 	search_buffer: 'search in buffer', search_next: 'next match', search_prev: 'prev match',
 	surround_add: 'surround add', surround_replace: 'surround replace', surround_delete: 'surround delete',
 	text_object_inner: 'select inside', text_object_around: 'select around',
