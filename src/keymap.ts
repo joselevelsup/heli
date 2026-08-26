@@ -41,6 +41,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		// space leader (Phase 5)
 		'<space>f': 'leader_file', '<space>b': 'leader_buffer',
 		'<space>e': 'toggle_explorer',
+		'<space>k': 'hover',
 		'<space>s': 'leader_symbol', '<space><space>': 'leader_search',
 		// window mode Ctrl-w (Phase 8)
 		'<C-w>s': 'win_split_h', '<C-w>v': 'win_split_v', '<C-w>c': 'win_close', '<C-w>q': 'win_close',
@@ -78,6 +79,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		'ms': 'surround_add', 'mr': 'surround_replace', 'md': 'surround_delete',
 		'mi': 'text_object_inner', 'ma': 'text_object_around',
 		'gd': 'goto_definition', 'gh': 'line_start', 'gl': 'line_end', 'gs': 'line_first_nonws', K: 'hover',
+		'<space>k': 'hover',
 		'<space>e': 'toggle_explorer',
 		'zz': 'reveal_center', 'zt': 'reveal_top', 'zb': 'reveal_bottom',
 		'<C-d>': 'scroll_down', '<C-u>': 'scroll_up',

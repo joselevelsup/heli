@@ -158,6 +158,16 @@
         "when": "editorTextFocus && helix.mode == 'normal' || editorTextFocus && helix.mode == 'select'"
       },
       {
+        "command": "selectNextSuggestion",
+        "key": "ctrl+n",
+        "when": "suggestWidgetVisible"
+      },
+      {
+        "command": "selectPrevSuggestion",
+        "key": "ctrl+p",
+        "when": "suggestWidgetVisible"
+      },
+      {
         "command": "list.focusDown",
         "key": "j",
         "when": "(filesExplorerFocus || listFocus) && !inputFocus"
