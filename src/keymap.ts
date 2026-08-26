@@ -25,6 +25,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		i: 'insert_start', a: 'insert_after', I: 'insert_line_start', A: 'insert_line_end',
 		o: 'open_below', O: 'open_above',
 		u: 'undo', U: 'redo',
+		'>': 'indent', '<': 'outdent',
 		// g prefix (Phase 6)
 		'gd': 'goto_definition', 'gD': 'goto_type_definition', 'gr': 'goto_references', 'gh': 'hover',
 		// match mode `m` (Phase 7)
@@ -68,6 +69,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		i: 'insert_start', a: 'insert_after', I: 'insert_line_start', A: 'insert_line_end',
 		o: 'open_below', O: 'open_above',
 		u: 'undo', U: 'redo',
+		'>': 'indent', '<': 'outdent',
 		'mm': 'match_bracket',
 		'ms': 'surround_add', 'mr': 'surround_replace', 'md': 'surround_delete',
 		'mi': 'text_object_inner', 'ma': 'text_object_around',
@@ -104,6 +106,7 @@ export const descriptions: Record<string, string> = {
 	insert_line_start: 'insert at line start', insert_line_end: 'insert at line end',
 	open_below: 'open line below', open_above: 'open line above',
 	undo: 'undo', redo: 'redo', escape: 'exit to normal',
+	indent: 'indent line', outdent: 'outdent line',
 	goto_definition: 'go to definition', goto_type_definition: 'go to type def',
 	goto_references: 'go to references', hover: 'show hover',
 	leader_file: 'file picker', leader_buffer: 'buffer picker',

@@ -39,7 +39,7 @@ pending sequence). `v` toggles Select. The indicator is colored per mode when
 | 2 | Motions | `h j k l`, `w b e`, `W B E`, `0 ^ $` (`Home`/`End`), `gg G ge`, `{ }`, `%`, `mm`, `Ctrl-d`/`Ctrl-u` half-page, count (`3w`, `12G`) |
 | 2 | Find/till | `f F t T <char>`, `;` `,` |
 | 2 | Selections | `x` line, `X` extend up, `%` whole buffer, `v` toggle select, `s` select matches, `S` split, `,` collapse cursors, VS Code multi-cursor composes |
-| 3 | Operators | `d c y p P`, registers `"<reg>` |
+| 3 | Operators | `d c y p P`, registers `"<reg>`, `>`/`<` indent/outdent |
 | 3 | Undo/redo | `u U` |
 | 4 | Command mode | `:w :write :q :quit :wq :x :o/:open <path> :new :bd/:buffer-close :reload :source :set :help` |
 | 5 | Leader | `Space f` files, `Space b` buffers, `Space e` toggle explorer, `Space s` symbols, `Space Space` search |

@@ -477,9 +477,28 @@ function openAbove(ctx: Ctx): void {
 	});
 }
 
-// --- undo / redo ------------------------------------------------------------
+// --- undo / redo / indent --------------------------------------------------
 const undo = (_ctx: Ctx) => { void vscode.commands.executeCommand('undo'); };
 const redo = (_ctx: Ctx) => { void vscode.commands.executeCommand('redo'); };
+
+// Helix `<` / `>`: outdent / indent each selection by one level. On a bare
+// cursor (1-char selection in Helix terms) they act on the current line.
+function indent(ctx: Ctx): void {
+	const ed = ctx.editor;
+	// Ensure every selection is linewise so VS Code indents whole lines.
+	const lines = new Set<number>();
+	for (const s of ed.selections) {
+		for (let l = s.start.line; l <= s.end.line; l++) { lines.add(l); }
+	}
+	ed.selections = Array.from(lines).sort((a, b) => a - b).map(l => {
+		const r = ed.document.lineAt(l).range;
+		return new vscode.Selection(r.start, r.end);
+	});
+	const cmd = ctx.arg === 'outdent' ? 'editor.action.outdentLines' : 'editor.action.indentLines';
+	for (let k = 0; k < ctx.count; k++) { void vscode.commands.executeCommand(cmd); }
+}
+const indentLine = (ctx: Ctx) => indent(ctx);
+const outdentLine = (ctx: Ctx) => indent({ ...ctx, arg: 'outdent' });
 
 // --- delegates to VS Code native commands (LSP / pickers / view) ------------
 function execVsCmd(name: string): Action {
@@ -699,6 +718,8 @@ export const actions: Record<string, Action> = {
 	open_above: openAbove,
 	undo,
 	redo,
+	indent: indentLine,
+	outdent: outdentLine,
 	escape: escapeToNormal,
 	goto_definition: execVsCmd('editor.action.revealDefinition'),
 	goto_type_definition: execVsCmd('editor.action.goToTypeDefinition'),

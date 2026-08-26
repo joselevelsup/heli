@@ -90,6 +90,23 @@ suite('parity: motions & operators', () => {
 		assert.equal(ed.selection.active.character, 1); // cursor stays at deletion point
 	});
 
+	test('> indents the current line', async () => {
+		const ed = await setupDoc('hello\nworld');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		run(ed, 'indent');
+		await settle(ed);
+		// VS Code default is spaces (tabSize=4) for untitled docs
+		assert.equal(ed.document.getText(), '    hello\nworld');
+	});
+
+	test('< outdents the current line', async () => {
+		const ed = await setupDoc('    hello\nworld');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 1), new vscode.Position(0, 1));
+		run(ed, 'outdent');
+		await settle(ed);
+		assert.equal(ed.document.getText(), 'hello\nworld');
+	});
+
 	test('yank then paste_after duplicates text', async () => {
 		const ed = await setupDoc('foo bar');
 		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 3));
