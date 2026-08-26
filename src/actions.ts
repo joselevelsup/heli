@@ -488,14 +488,17 @@ const redo = (_ctx: Ctx) => { void vscode.commands.executeCommand('redo'); };
 // cursor (1-char selection in Helix terms) they act on the current line.
 function indent(ctx: Ctx): void {
 	const ed = ctx.editor;
-	// Ensure every selection is linewise so VS Code indents whole lines.
-	const lines = new Set<number>();
-	for (const s of ed.selections) {
-		for (let l = s.start.line; l <= s.end.line; l++) { lines.add(l); }
-	}
-	ed.selections = Array.from(lines).sort((a, b) => a - b).map(l => {
-		const r = ed.document.lineAt(l).range;
-		return new vscode.Selection(r.start, r.end);
+	// Convert each selection to a single linewise selection spanning all its
+	// lines — one selection per original range, NOT one per line (which would
+	// spawn multi-cursors after the indent command runs).
+	ed.selections = ed.selections.map(s => {
+		const startLine = s.start.line;
+		const endLine = s.end.line;
+		const endLineRange = ed.document.lineAt(endLine).range;
+		return new vscode.Selection(
+			new vscode.Position(startLine, 0),
+			endLineRange.end,
+		);
 	});
 	const cmd = ctx.arg === 'outdent' ? 'editor.action.outdentLines' : 'editor.action.indentLines';
 	for (let k = 0; k < ctx.count; k++) { void vscode.commands.executeCommand(cmd); }

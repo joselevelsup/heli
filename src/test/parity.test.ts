@@ -107,6 +107,16 @@ suite('parity: motions & operators', () => {
 		assert.equal(ed.document.getText(), 'hello\nworld');
 	});
 
+	test('> on multi-line selection indents all lines without spawning cursors', async () => {
+		const ed = await setupDoc('aaa\nbbb\nccc');
+		// select lines 0-1 (like pressing x twice from line 0)
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(1, 3));
+		run(ed, 'indent');
+		await settle(ed);
+		assert.equal(ed.document.getText(), '    aaa\n    bbb\nccc');
+		assert.equal(ed.selections.length, 1); // no multi-cursor spawned
+	});
+
 	test('yank then paste_after duplicates text', async () => {
 		const ed = await setupDoc('foo bar');
 		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 3));
