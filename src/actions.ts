@@ -131,9 +131,12 @@ const moveUp = (ctx: Ctx) => movePos(ctx, (ed, h) => {
 	return new vscode.Position(h.line - 1, ch);
 }, false);
 
-const lineStart = (ctx: Ctx) => movePos(ctx, (_ed, h) => new vscode.Position(h.line, 0));
-const lineFirstNonWs = (ctx: Ctx) => movePos(ctx, firstNonWs);
-const lineEnd = (ctx: Ctx) => movePos(ctx, lineEndPos, true, true);
+// Line jumps (0/^/$/gh/gl/gs/Home/End): Helix collapses to a single cursor at
+// the destination — no selection dragged. This differs from word/find motions
+// which are select-first.
+const lineStart = (ctx: Ctx) => movePos(ctx, (_ed, h) => new vscode.Position(h.line, 0), false);
+const lineFirstNonWs = (ctx: Ctx) => movePos(ctx, firstNonWs, false);
+const lineEnd = (ctx: Ctx) => movePos(ctx, lineEndPos, false);
 
 const wordFwd = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.nextWordStart(d, i, false));
 const wordBack = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.prevWordStart(d, i, false));

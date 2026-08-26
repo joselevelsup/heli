@@ -27,7 +27,9 @@ export const keymap: Record<string, Record<string, string>> = {
 		u: 'undo', U: 'redo',
 		'>': 'indent', '<': 'outdent',
 		// g prefix (Phase 6)
-		'gd': 'goto_definition', 'gD': 'goto_type_definition', 'gr': 'goto_references', 'gh': 'hover',
+		'gd': 'goto_definition', 'gD': 'goto_type_definition', 'gr': 'goto_references',
+		'gh': 'line_start', 'gl': 'line_end', 'gs': 'line_first_nonws',
+		K: 'hover',
 		// match mode `m` (Phase 7)
 		'mm': 'match_bracket',
 		'ms': 'surround_add', 'mr': 'surround_replace', 'md': 'surround_delete',
@@ -73,7 +75,7 @@ export const keymap: Record<string, Record<string, string>> = {
 		'mm': 'match_bracket',
 		'ms': 'surround_add', 'mr': 'surround_replace', 'md': 'surround_delete',
 		'mi': 'text_object_inner', 'ma': 'text_object_around',
-		'gd': 'goto_definition', 'gh': 'hover',
+		'gd': 'goto_definition', 'gh': 'line_start', 'gl': 'line_end', 'gs': 'line_first_nonws', K: 'hover',
 		'<space>e': 'toggle_explorer',
 		'zz': 'reveal_center', 'zt': 'reveal_top', 'zb': 'reveal_bottom',
 		'<C-d>': 'scroll_down', '<C-u>': 'scroll_up',

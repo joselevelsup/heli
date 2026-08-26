@@ -140,10 +140,10 @@ suite('parity: surround & text objects (Phase 7)', () => {
 		assert.equal(ed.document.getText(), '[hello] world');
 	});
 
-	test('$ then ms[ wraps to end of line including last char', async () => {
+	test('select_line then ms[ wraps the full line', async () => {
 		const ed = await setupDoc('hello world');
 		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
-		run(ed, 'line_end'); // select to end of line
+		run(ed, 'select_line'); // select the whole line (Helix x)
 		await settle(ed);
 		assert.equal(ed.document.getText(ed.selection), 'hello world');
 		run(ed, 'surround_add', { arg: '[' });
@@ -250,6 +250,35 @@ suite('parity: g-prefix buffer nav — issue #4', () => {
 		assert.equal(typeof actions.goto_end, 'function');
 		assert.equal(typeof actions.scroll_down, 'function');
 		assert.equal(typeof actions.scroll_up, 'function');
+	});
+});
+
+suite('parity: g-prefix line jumps — issue #8', () => {
+	test('gl goes to end of line (collapses, no selection)', async () => {
+		const ed = await setupDoc('  hello world  ');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		run(ed, 'line_end');
+		await settle(ed);
+		// line_end collapses to the last char (index 14)
+		assert.equal(ed.selection.active.character, 14);
+		assert.equal(ed.selection.isEmpty, true);
+	});
+
+	test('gh goes to very start of line (column 0)', async () => {
+		const ed = await setupDoc('  hello world  ');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 5), new vscode.Position(0, 5));
+		run(ed, 'line_start');
+		await settle(ed);
+		assert.equal(ed.selection.active.character, 0);
+	});
+
+	test('gs goes to first non-whitespace character', async () => {
+		const ed = await setupDoc('  hello world  ');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		run(ed, 'line_first_nonws');
+		await settle(ed);
+		// first non-ws is 'h' at index 2
+		assert.equal(ed.selection.active.character, 2);
 	});
 });
 
