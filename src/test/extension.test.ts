@@ -88,4 +88,21 @@ suite('which-key popup', () => {
 		assert.equal(sp?.label, 'Space');
 		assert.equal(sp?.description, 'global search');
 	});
+
+	test('multi-level: <space>o sub-menu lists its children — issue #11', () => {
+		const map = {
+			'<space>op': 'magit.status',
+			'<space>ol': 'magit.log',
+			'<space>f': 'leader_file',
+		};
+		// <space>o is a sub-prefix: it has children but no direct action
+		const topItems = buildWhichKeyItems(map, '<space>');
+		const o = topItems.find(i => i.token === 'o');
+		assert.ok(o, 'o should appear under <space>');
+		// descending into <space>o shows p and l
+		const subItems = buildWhichKeyItems(map, '<space>o');
+		const subTokens = subItems.map(i => i.token).sort();
+		assert.deepEqual(subTokens, ['l', 'p'].sort());
+		assert.equal(subItems.find(i => i.token === 'p')?.description, 'magit.status');
+	});
 });

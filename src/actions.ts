@@ -46,7 +46,15 @@ function movePos(ctx: Ctx, fn: (ed: vscode.TextEditor, head: vscode.Position) =>
 		const old = s.active;
 		let p = old;
 		for (let k = 0; k < ctx.count; k++) {p = fn(ed, p);}
-		if (sel) { return new vscode.Selection(s.anchor, p); }
+		if (sel) {
+			// inclusive: extend the head by 1 to cover the destination char
+			if (inclusive) {
+				const line = ed.document.lineAt(p.line);
+				const end = p.isEqual(line.range.end) ? p : p.translate(0, 1);
+				return new vscode.Selection(s.anchor, end);
+			}
+			return new vscode.Selection(s.anchor, p);
+		}
 		if (!keepRange) { return new vscode.Selection(p, p); }
 		// inclusive: extend the selection to include the char at the destination
 		if (inclusive) {
@@ -72,7 +80,13 @@ function moveFlat(ctx: Ctx, fn: (doc: string, i: number) => number, keepRange = 
 		for (let k = 0; k < ctx.count; k++) {i = fn(doc, i);}
 		i = clampi(i, 0, doc.length);
 		const p = ed.document.positionAt(i);
-		if (sel) { return new vscode.Selection(s.anchor, p); }
+		if (sel) {
+			if (inclusive) {
+				const incEnd = clampi(i + 1, 0, doc.length);
+				return new vscode.Selection(s.anchor, ed.document.positionAt(incEnd));
+			}
+			return new vscode.Selection(s.anchor, p);
+		}
 		if (!keepRange) { return new vscode.Selection(p, p); }
 		if (inclusive) {
 			const incEnd = clampi(i + 1, 0, doc.length);

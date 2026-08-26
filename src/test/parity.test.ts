@@ -150,6 +150,38 @@ suite('parity: surround & text objects (Phase 7)', () => {
 		assert.equal(ed.document.getText(), '[hello] world');
 	});
 
+	test('ms[ wraps a manually selected word including last char — issue #10', async () => {
+		const ed = await setupDoc('hello world');
+		// manually select 'hello' (positions 0..5 exclusive = 'hello')
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 5));
+		run(ed, 'surround_add', { arg: '[' });
+		await settle(ed);
+		assert.equal(ed.document.getText(), '[hello] world');
+	});
+
+	test('miw then ms[ wraps the full word — issue #10', async () => {
+		const ed = await setupDoc('hello world');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 2), new vscode.Position(0, 2));
+		run(ed, 'text_object_inner', { arg: 'w' });
+		await settle(ed);
+		assert.equal(ed.document.getText(ed.selection), 'hello');
+		run(ed, 'surround_add', { arg: '[' });
+		await settle(ed);
+		assert.equal(ed.document.getText(), '[hello] world');
+	});
+
+	test('ve (select mode + e) then ms[ wraps the full word — issue #10', async () => {
+		const ed = await setupDoc('hello world');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		run(ed, 'toggle_select'); // enter select mode
+		run(ed, 'word_end'); // e in select mode should include the last char
+		await settle(ed);
+		assert.equal(ed.document.getText(ed.selection), 'hello'); // must include 'o'
+		run(ed, 'surround_add', { arg: '[' });
+		await settle(ed);
+		assert.equal(ed.document.getText(), '[hello] world');
+	});
+
 	test('select_line then ms[ wraps the full line', async () => {
 		const ed = await setupDoc('hello world');
 		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));

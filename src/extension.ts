@@ -10,7 +10,13 @@ let enabled = true;
 let effectiveKeymap: Record<string, Record<string, string>> = { ...keymap };
 
 // Prefixes that open the which-key popup (not `"`, which awaits a register name).
-const WHICH_KEY_PREFIXES = new Set(['g', 'm', 'z', 'Z', '<space>', '<C-w>']);
+// Dynamic: any key sequence that has children in the effective keymap is a prefix.
+function hasChildren(map: Record<string, string>, prefix: string): boolean {
+	for (const key of Object.keys(map)) {
+		if (key.startsWith(prefix) && key.length > prefix.length) { return true; }
+	}
+	return false;
+}
 
 // --- keystroke processor state (normal/select mode) ------------------------
 let countStr = '';
@@ -151,10 +157,13 @@ export function processKey(token: string, replay = false): void {
 
 	keyBuf += token;
 
-	// Prefix keys wait for the next key (g, m, z, Z, <space>, ", <C-w>).
+	const map = effectiveKeymap[mode.current];
+
+	// Prefix keys wait for the next key (g, m, z, Z, <space>, ", <C-w>, or any
+	// user-defined sub-prefix like <space>o).
 	if (PREFIX_KEYS.has(keyBuf)) {
-		// which-key prefixes open the popup; `"` just awaits a register name.
-		if (WHICH_KEY_PREFIXES.has(keyBuf)) {
+		// `"` just awaits a register name; others open the which-key popup if they have children.
+		if (keyBuf !== '"' && hasChildren(map, keyBuf)) {
 			const cfg = vscode.workspace.getConfiguration('heli');
 			if (!cfg.get<boolean>('whichKey', true)) { return; }
 			const prefix = keyBuf;
@@ -166,7 +175,20 @@ export function processKey(token: string, replay = false): void {
 		return;
 	}
 
-	const map = effectiveKeymap[mode.current];
+	// Also handle user-defined sub-prefixes not in the hardcoded PREFIX_KEYS set
+	// (e.g. <space>o). If keyBuf matches a prefix action AND has children, open popup.
+	if (hasChildren(map, keyBuf) && !map[keyBuf]) {
+		const cfg = vscode.workspace.getConfiguration('heli');
+		if (cfg.get<boolean>('whichKey', true)) {
+			const prefix = keyBuf;
+			const count = countStr ? parseInt(countStr, 10) : 1;
+			const reg = pendingRegister ?? '"';
+			resetState();
+			void openWhichKey(prefix, count, reg);
+		}
+		return;
+	}
+
 	const actionName = map[keyBuf];
 	const rawCount = countStr ? parseInt(countStr, 10) : 1;
 	const count = Math.min(Math.max(1, rawCount), 9999); // ponytail: cap to avoid editor freeze on huge counts
@@ -215,18 +237,20 @@ function openWhichKey(prefix: string, count: number, register: string): void {
 	qp.ignoreFocusOut = true;
 	let settled = false;
 
+	let currentPrefix = prefix; // tracks descent into sub-menus
 	const consume = (rawNext: string) => {
 		if (settled) { return; }
 		const nextTok = rawNext === ' ' ? '<space>' : rawNext;
-		const full = prefix + nextTok;
+		const full = currentPrefix + nextTok;
 		if (map[full]) {
 			settled = true;
 			qp.hide();
 			// Delay so the QuickPick fully releases focus before the command fires —
 			// needed for focus-moving commands like toggle_explorer.
 			setTimeout(() => commitAction(map[full], count, register), 50);
-		} else if (WHICH_KEY_PREFIXES.has(full)) {
-			// descend one level (no 3-key sequences exist yet, but be safe)
+		} else if (hasChildren(map, full)) {
+			// descend into sub-menu
+			currentPrefix = full;
 			qp.items = buildWhichKeyItems(map, full);
 			qp.value = '';
 		} else {
@@ -248,15 +272,33 @@ function openWhichKey(prefix: string, count: number, register: string): void {
 export interface WhichKeyItem extends vscode.QuickPickItem { token: string }
 
 export function buildWhichKeyItems(map: Record<string, string>, prefix: string): WhichKeyItem[] {
-	const items: WhichKeyItem[] = [];
+	// Collect the next single token after `prefix` for every key under it.
+	// A token may be a multi-char special key like <space> or <C-w> — extract it.
+	const seen = new Map<string, string>(); // token -> action (or '' if it's just a prefix)
 	for (const key of Object.keys(map)) {
 		if (!key.startsWith(prefix) || key.length <= prefix.length) { continue; }
-		const nextTok = key.slice(prefix.length);
-		const action = map[key];
+		const rest = key.slice(prefix.length);
+		// extract the first token: either <...> or a single char
+		let tok: string;
+		if (rest.startsWith('<')) {
+			const close = rest.indexOf('>');
+			tok = close >= 0 ? rest.slice(0, close + 1) : rest[0];
+		} else {
+			tok = rest[0];
+		}
+		// if the whole rest is just this token, it's a leaf action; otherwise it's a prefix
+		if (rest === tok) {
+			seen.set(tok, map[key]);
+		} else if (!seen.has(tok)) {
+			seen.set(tok, ''); // prefix only, no direct action
+		}
+	}
+	const items: WhichKeyItem[] = [];
+	for (const [tok, action] of seen) {
 		items.push({
-			token: nextTok,
-			label: prettyToken(nextTok),
-			description: descriptions[action] ?? action,
+			token: tok,
+			label: prettyToken(tok),
+			description: action ? (descriptions[action] ?? action) : '…',
 		});
 	}
 	items.sort((a, b) => a.label.localeCompare(b.label));
