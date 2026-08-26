@@ -35,11 +35,16 @@ function resetState(): void {
 
 function dispatch(actionName: string, count: number, register: string): void {
 	const fn = actions[actionName];
-	if (!fn) { return; }
-	const ed = vscode.window.activeTextEditor;
-	if (!ed) { return; }
-	const ctx: Ctx = { editor: ed, mode: mode as ModeLike, count, register, arg: undefined };
-	fn(ctx);
+	if (fn) {
+		const ed = vscode.window.activeTextEditor;
+		if (!ed) { return; }
+		const ctx: Ctx = { editor: ed, mode: mode as ModeLike, count, register, arg: undefined };
+		fn(ctx);
+		return;
+	}
+	// Not a heli action — treat it as a VS Code command ID (e.g. magit.status).
+	// This lets users bind any installed extension's command via heli.keybindings.
+	void vscode.commands.executeCommand(actionName);
 }
 
 /** Resolve an action name: if it captures target char(s), set pendingCapture;

@@ -131,6 +131,24 @@ Special-key tokens: `<space>` `<esc>` `<cr>` `<bs>` `<del>` `<up>` `<down>`
 Changes apply automatically when you save `settings.json`, or run the
 **`heli: Reload keybindings`** command.
 
+### Binding to VS Code commands
+
+You can also bind keys to **any VS Code command ID** — including commands from
+other extensions. If the action name isn't a built-in heli action, heli treats
+it as a VS Code command and executes it. For example, to bind `Space g` to
+Magit's status command:
+
+```jsonc
+"heli.keybindings": {
+  "normal": {
+    "<space>g": "magit.status"
+  }
+}
+```
+
+To find a command ID, open the Command Palette (`Ctrl+Shift+P`), find the
+command, click the gear icon → "Copy Command ID".
+
 ## Known gaps / intentionally different
 
 - **`d`/`c`/`y` on a bare cursor act on the character under it** (Helix treats
