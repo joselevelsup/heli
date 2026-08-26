@@ -36,21 +36,33 @@ const clampi = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, 
 /** Apply a position-returning motion, repeating `count` times.
  * Helix select-first: in Normal mode, `keepRange` motions leave a selection
  * over [old active, new]; collapsing motions (h/j/k/l/gg/G) leave a single char.
+ * `inclusive` motions (e/E/$) land ON the last char — the selection is extended
+ * by 1 to include it (VS Code selections are exclusive at the end).
  * In Select mode the anchor is preserved and the head extends. */
-function movePos(ctx: Ctx, fn: (ed: vscode.TextEditor, head: vscode.Position) => vscode.Position, keepRange = true): void {
+function movePos(ctx: Ctx, fn: (ed: vscode.TextEditor, head: vscode.Position) => vscode.Position, keepRange = true, inclusive = false): void {
 	const ed = ctx.editor;
 	const sel = ctx.mode.current === 'select';
 	ed.selections = ed.selections.map(s => {
 		const old = s.active;
 		let p = old;
 		for (let k = 0; k < ctx.count; k++) {p = fn(ed, p);}
-		return sel ? new vscode.Selection(s.anchor, p) : (keepRange ? new vscode.Selection(old, p) : new vscode.Selection(p, p));
+		if (sel) { return new vscode.Selection(s.anchor, p); }
+		if (!keepRange) { return new vscode.Selection(p, p); }
+		// inclusive: extend the selection to include the char at the destination
+		if (inclusive) {
+			const line = ed.document.lineAt(p.line);
+			const end = p.isEqual(line.range.end) ? p : p.translate(0, 1);
+			return p.isAfterOrEqual(old)
+				? new vscode.Selection(old, end)
+				: new vscode.Selection(p, old.translate(0, 1));
+		}
+		return new vscode.Selection(old, p);
 	});
 	revealActive(ed);
 }
 
-/** Apply a flat-offset motion, repeating `count` times. Same keepRange rule as movePos. */
-function moveFlat(ctx: Ctx, fn: (doc: string, i: number) => number, keepRange = true): void {
+/** Apply a flat-offset motion, repeating `count` times. Same keepRange/inclusive rule as movePos. */
+function moveFlat(ctx: Ctx, fn: (doc: string, i: number) => number, keepRange = true, inclusive = false): void {
 	const ed = ctx.editor;
 	const doc = ed.document.getText();
 	const sel = ctx.mode.current === 'select';
@@ -60,7 +72,16 @@ function moveFlat(ctx: Ctx, fn: (doc: string, i: number) => number, keepRange = 
 		for (let k = 0; k < ctx.count; k++) {i = fn(doc, i);}
 		i = clampi(i, 0, doc.length);
 		const p = ed.document.positionAt(i);
-		return sel ? new vscode.Selection(s.anchor, p) : (keepRange ? new vscode.Selection(s.active, p) : new vscode.Selection(p, p));
+		if (sel) { return new vscode.Selection(s.anchor, p); }
+		if (!keepRange) { return new vscode.Selection(p, p); }
+		if (inclusive) {
+			const incEnd = clampi(i + 1, 0, doc.length);
+			const endPos = ed.document.positionAt(incEnd);
+			return i >= oldOff
+				? new vscode.Selection(s.active, endPos)
+				: new vscode.Selection(p, ed.document.positionAt(clampi(oldOff + 1, 0, doc.length)));
+		}
+		return new vscode.Selection(s.active, p);
 	});
 	revealActive(ed);
 }
@@ -112,14 +133,14 @@ const moveUp = (ctx: Ctx) => movePos(ctx, (ed, h) => {
 
 const lineStart = (ctx: Ctx) => movePos(ctx, (_ed, h) => new vscode.Position(h.line, 0));
 const lineFirstNonWs = (ctx: Ctx) => movePos(ctx, firstNonWs);
-const lineEnd = (ctx: Ctx) => movePos(ctx, lineEndPos);
+const lineEnd = (ctx: Ctx) => movePos(ctx, lineEndPos, true, true);
 
 const wordFwd = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.nextWordStart(d, i, false));
 const wordBack = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.prevWordStart(d, i, false));
-const wordEndFwd = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.nextWordEnd(d, i, false));
+const wordEndFwd = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.nextWordEnd(d, i, false), true, true);
 const WORDFwd = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.nextWordStart(d, i, true));
 const WORDBack = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.prevWordStart(d, i, true));
-const WORDEndFwd = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.nextWordEnd(d, i, true));
+const WORDEndFwd = (ctx: Ctx) => moveFlat(ctx, (d, i) => M.nextWordEnd(d, i, true), true, true);
 
 function gotoStart(ctx: Ctx): void {
 	const ed = ctx.editor;

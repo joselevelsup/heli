@@ -112,6 +112,28 @@ suite('parity: surround & text objects (Phase 7)', () => {
 		assert.equal(ed.document.getText(), 'foo (bar) baz');
 	});
 
+	test('e then ms[ wraps the FULL word including last char — issue #7', async () => {
+		const ed = await setupDoc('hello world');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		run(ed, 'word_end'); // select to end of 'hello'
+		await settle(ed);
+		assert.equal(ed.document.getText(ed.selection), 'hello'); // should include 'o'
+		run(ed, 'surround_add', { arg: '[' });
+		await settle(ed);
+		assert.equal(ed.document.getText(), '[hello] world');
+	});
+
+	test('$ then ms[ wraps to end of line including last char', async () => {
+		const ed = await setupDoc('hello world');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		run(ed, 'line_end'); // select to end of line
+		await settle(ed);
+		assert.equal(ed.document.getText(ed.selection), 'hello world');
+		run(ed, 'surround_add', { arg: '[' });
+		await settle(ed);
+		assert.equal(ed.document.getText(), '[hello world]');
+	});
+
 	test('surround_delete removes enclosing parens', async () => {
 		const ed = await setupDoc('foo (bar) baz');
 		ed.selection = new vscode.Selection(new vscode.Position(0, 5), new vscode.Position(0, 5));
