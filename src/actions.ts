@@ -245,6 +245,7 @@ function selectLine(ctx: Ctx): void {
 		const startPos = new vscode.Position(startLine, 0);
 		return new vscode.Selection(startPos, endPos);
 	});
+	revealActive(ed);
 }
 
 function selectLineUp(ctx: Ctx): void {
@@ -257,12 +258,14 @@ function selectLineUp(ctx: Ctx): void {
 		const endPos = endLine >= lastLine ? ed.document.lineAt(endLine).range.end : new vscode.Position(endLine + 1, 0);
 		return new vscode.Selection(endPos, startPos); // anchor at bottom, cursor at top
 	});
+	revealActive(ed);
 }
 
 function selectAll(ctx: Ctx): void {
 	const ed = ctx.editor;
 	const last = ed.document.lineAt(ed.document.lineCount - 1);
 	ed.selections = [new vscode.Selection(new vscode.Position(0, 0), last.range.end)];
+	revealActive(ed);
 }
 
 function toggleSelect(ctx: Ctx): void {

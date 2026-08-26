@@ -340,6 +340,22 @@ suite('parity: motions reveal the cursor — issue #5', () => {
 		const visible = ed.visibleRanges.some(r => r.start.line <= cur && cur <= r.end.line);
 		assert.ok(visible, `cursor line ${cur} should be visible after 120j (visible=${JSON.stringify(ed.visibleRanges.map(r => [r.start.line, r.end.line]))})`);
 	});
+
+	test('select_line (x) extending down keeps the end visible', async () => {
+		const big = Array.from({ length: 200 }, (_, i) => `line ${i}`).join('\n');
+		const ed = await setupDoc(big);
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		await settle(ed);
+		// press x several times to extend the linewise selection downward
+		for (let i = 0; i < 15; i++) {
+			run(ed, 'select_line');
+			await tick(20);
+		}
+		await settle(ed);
+		const endLine = ed.selection.end.line;
+		const visible = ed.visibleRanges.some(r => r.start.line <= endLine && endLine <= r.end.line);
+		assert.ok(visible, `selection end line ${endLine} should be visible after 30x (visible=${JSON.stringify(ed.visibleRanges.map(r => [r.start.line, r.end.line]))})`);
+	});
 });
 
 suite('parity: file explorer (Space-e) — issue #6', () => {
