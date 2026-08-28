@@ -41,6 +41,52 @@ suite('motions', () => {
 		assert.equal(M.lineEnd(doc, 0), 11); // newline offset
 	});
 
+	// Phase 0 characterization: lock current `classify` semantics across the
+	// exact set of code points `/\s/` and `[A-Za-z0-9_]/` match today, so a
+	// later char-code fast path can't silently drift word-motion behavior.
+	suite('classify (character class) — Phase 0 characterization', () => {
+		const space = (ch: string) => assert.equal(M.classify(ch, false), 'space', JSON.stringify(ch) + ' should be space');
+		const word = (ch: string) => assert.equal(M.classify(ch, false), 'word', JSON.stringify(ch) + ' should be word');
+		const punct = (ch: string) => assert.equal(M.classify(ch, false), 'punct', JSON.stringify(ch) + ' should be punct');
+		test('ASCII whitespace is space', () => {
+			space('\t'); space('\n'); space('\r'); space('\f'); space('\v'); space(' ');
+		});
+		test('Unicode whitespace is space (matches /\\s/)', () => {
+			space('\u00a0'); // NBSP
+			space('\u2003'); // em space
+			space('\u2002'); // en space
+			space('\u2009'); // thin space
+			space('\u200A'); // hair space
+			space('\u202F'); // narrow nbsp
+			space('\u2028'); // line separator
+			space('\u2029'); // paragraph separator
+			space('\u3000'); // ideographic space
+		});
+		test('U+180E mongolian vowel separator is NOT space (excluded from /\\s/)', () => {
+			punct('\u180E');
+		});
+		test('ASCII word chars are word', () => {
+			word('a'); word('Z'); word('0'); word('9'); word('_');
+		});
+		test('non-ASCII letters are punct (word class is ASCII-only)', () => {
+			punct('é'); punct('中'); punct('😀');
+		});
+		test('punctuation is punct', () => {
+			punct('.'); punct('('); punct('-'); punct('/');
+		});
+		test('undefined/empty are space', () => {
+			assert.equal(M.classify(undefined, false), 'space');
+			assert.equal(M.classify('', false), 'space');
+		});
+		test('big=true collapses all non-space to word', () => {
+			assert.equal(M.classify('.', true), 'word');
+			assert.equal(M.classify('é', true), 'word');
+			assert.equal(M.classify('中', true), 'word');
+			assert.equal(M.classify(' ', true), 'space');
+			assert.equal(M.classify('\u00a0', true), 'space');
+		});
+	});
+
 	suite('text objects', () => {
 		const doc = 'foo (bar baz) "hi there"';
 		const eq = (r: T.Range | null, a: number, b: number) => r !== null && r[0] === a && r[1] === b;
@@ -60,6 +106,51 @@ suite('motions', () => {
 			assert.deepEqual(T.surroundPair(')'), ['(', ')']);
 			assert.deepEqual(T.surroundPair('"'), ['"', '"']);
 			assert.equal(T.surroundPair('x'), null);
+		});
+
+		// Phase 0 characterization: lock current `paragraphRange` offsets on
+		// edge cases the existing self-check doesn't cover, so a single-split
+		// rewrite can't silently drift paragraph text-object behavior.
+		suite('paragraph (mip/map) — Phase 0 characterization', () => {
+			test('empty doc -> [0,0]', () => {
+				assert.ok(eq(T.textObjectRange('', 0, 'p', false), 0, 0));
+				assert.ok(eq(T.textObjectRange('', 0, 'p', true), 0, 0));
+			});
+			test('single line -> whole line, inner==around', () => {
+				assert.ok(eq(T.textObjectRange('aaa', 0, 'p', false), 0, 3));
+				assert.ok(eq(T.textObjectRange('aaa', 1, 'p', true), 0, 3));
+			});
+			test('cursor on a blank separator line -> empty range', () => {
+				// "aaa\nbbb\n\nccc": offset 8 is the blank line between paras
+				const d = 'aaa\nbbb\n\nccc';
+				assert.ok(eq(T.textObjectRange(d, 8, 'p', false), 8, 8));
+				assert.ok(eq(T.textObjectRange(d, 8, 'p', true), 8, 8));
+			});
+			test('middle paragraph inner', () => {
+				// "aaa\nbbb\n\nccc\nddd\n\neee": offsets 9..16 = "ccc\nddd"
+				const d = 'aaa\nbbb\n\nccc\nddd\n\neee';
+				assert.ok(eq(T.textObjectRange(d, 9, 'p', false), 9, 16));
+				assert.ok(eq(T.textObjectRange(d, 14, 'p', false), 9, 16));
+			});
+			test('middle paragraph around includes trailing blank line', () => {
+				const d = 'aaa\nbbb\n\nccc\nddd\n\neee';
+				// around on middle para -> [9,17) = "ccc\nddd\n"
+				assert.ok(eq(T.textObjectRange(d, 9, 'p', true), 9, 17));
+			});
+			test('last paragraph inner (no trailing newline)', () => {
+				const d = 'aaa\nbbb\n\nccc';
+				assert.ok(eq(T.textObjectRange(d, 9, 'p', false), 9, 12));
+			});
+			test('last paragraph around with trailing newline includes it', () => {
+				// "aaa\nbbb\n\nccc\n": last para "ccc", around includes the final \n
+				const d = 'aaa\nbbb\n\nccc\n';
+				assert.ok(eq(T.textObjectRange(d, 9, 'p', true), 9, 13));
+				assert.ok(eq(T.textObjectRange(d, 12, 'p', true), 9, 13));
+			});
+			test('first paragraph around includes trailing blank separator', () => {
+				const d = 'aaa\nbbb\n\nccc';
+				assert.ok(eq(T.textObjectRange(d, 0, 'p', true), 0, 8)); // "aaa\nbbb\n"
+			});
 		});
 	});
 });

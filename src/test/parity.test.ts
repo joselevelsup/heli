@@ -260,6 +260,75 @@ suite('parity: buffer search (/ n N) — issue #9', () => {
 	});
 });
 
+suite('parity: buffer search wrap & multi-cursor — Phase 0 characterization', () => {
+	// doc: "foo bar foo baz foo"  -> "foo" at offsets 0, 8, 16
+	const DOC = 'foo bar foo baz foo';
+	const sel = (c: number) => new vscode.Selection(new vscode.Position(0, c), new vscode.Position(0, c));
+
+	test('forward search wraps around to first match', async () => {
+		const ed = await setupDoc(DOC);
+		ed.selection = sel(16); // last foo
+		await withInputBox(() => Promise.resolve('foo'), async () => {
+			run(ed, 'search_buffer');
+			await settle(ed);
+		});
+		// first match forward from offset 17 -> none after, wraps to offset 0
+		assert.equal(ed.selection.start.character, 0);
+	});
+
+	test('backward search from mid-doc lands on previous match', async () => {
+		const ed = await setupDoc(DOC);
+		ed.selection = sel(16);
+		await withInputBox(() => Promise.resolve('foo'), async () => {
+			run(ed, 'search_buffer');
+			await settle(ed);
+		});
+		// first forward match from 17 wraps to 0
+		assert.equal(ed.selection.start.character, 0);
+		run(ed, 'search_prev'); // backward from 0 -> wraps to last (16)
+		await settle(ed);
+		assert.equal(ed.selection.start.character, 16);
+	});
+
+	test('backward search wraps to last match when none before cursor', async () => {
+		const ed = await setupDoc(DOC);
+		ed.selection = sel(0);
+		await withInputBox(() => Promise.resolve('foo'), async () => {
+			run(ed, 'search_buffer');
+			await settle(ed);
+		});
+		// forward from 1 -> match at 8
+		assert.equal(ed.selection.start.character, 8);
+		// go back to 0 explicitly, then backward
+		ed.selection = sel(0);
+		run(ed, 'search_prev');
+		await settle(ed);
+		assert.equal(ed.selection.start.character, 16); // wrap to last
+	});
+
+	test('multi-cursor backward search anchors per-cursor', async () => {
+		const ed = await setupDoc(DOC);
+		ed.selections = [sel(8), sel(16)];
+		await withInputBox(() => Promise.resolve('foo'), async () => {
+			run(ed, 'search_buffer');
+			await settle(ed);
+		});
+		// search_buffer runs doSearch forward once per cursor:
+		//   cursor at 8 -> forward from 9 -> match at 16
+		//   cursor at 16 -> forward from 17 -> wrap to 0
+		const startsFwd = ed.selections.map(s => s.start.character).sort((a, b) => a - b);
+		assert.deepEqual(startsFwd, [0, 16]);
+		// now set cursors back and run backward with two cursors
+		ed.selections = [sel(8), sel(16)];
+		run(ed, 'search_prev');
+		await settle(ed);
+		//   cursor at 8  -> backward (< 8)  -> match at 0
+		//   cursor at 16 -> backward (< 16) -> match at 8
+		const startsBwd = ed.selections.map(s => s.start.character).sort((a, b) => a - b);
+		assert.deepEqual(startsBwd, [0, 8]);
+	});
+});
+
 suite('parity: select-in-selection (s) — issue #1', () => {
 	test('s creates one selection per regex match within the selection', async () => {
 		const ed = await setupDoc('foo bar baz');
