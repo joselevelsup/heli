@@ -5,13 +5,30 @@ import { keymap, descriptions, prettyToken } from './keymap';
 
 let mode: ModeManager;
 let enabled = true;
-let whichKeyEnabled = true; // cached from settings in applyConfig; read on every prefix key
+let whichKeyEnabled = true; // cached from settings in readSettings; read on every prefix key
 
 // Effective keymap: default merged with user remaps from settings.json.
 let effectiveKeymap: Record<string, Record<string, string>> = { ...keymap };
 
-// Prefixes that open the which-key popup (not `"`, which awaits a register name).
-// Dynamic: any key sequence that has children in the effective keymap is a prefix.
+// Precomputed per-mode set of every prefix that has children in the effective
+// keymap (i.e. every proper prefix of every key). Rebuilt only when keybindings
+// change, so the hot path in processKey is O(1) membership instead of a linear
+// scan of the whole keymap per keystroke. `hasChildren` below is kept for the
+// which-key popup's sub-menu descent (runs once per popup key, not hot).
+let prefixChildren: Record<string, Set<string>> = { normal: new Set(), select: new Set(), insert: new Set() };
+
+function computePrefixChildren(map: Record<string, string>): Set<string> {
+	const set = new Set<string>();
+	for (const key of Object.keys(map)) {
+		// every proper prefix of `key` has at least one child (key itself)
+		for (let len = 1; len < key.length; len++) { set.add(key.slice(0, len)); }
+	}
+	return set;
+}
+
+// A prefix has children iff it's a proper prefix of some key in the map.
+// Used by the which-key popup (sub-menu descent); the hot dispatch path uses
+// the precomputed `prefixChildren` set instead.
 function hasChildren(map: Record<string, string>, prefix: string): boolean {
 	for (const key of Object.keys(map)) {
 		if (key.startsWith(prefix) && key.length > prefix.length) { return true; }
@@ -164,7 +181,7 @@ export function processKey(token: string, replay = false): void {
 	// user-defined sub-prefix like <space>o).
 	if (PREFIX_KEYS.has(keyBuf)) {
 		// `"` just awaits a register name; others open the which-key popup if they have children.
-		if (keyBuf !== '"' && hasChildren(map, keyBuf)) {
+		if (keyBuf !== '"' && (prefixChildren[mode.current]?.has(keyBuf) ?? false)) {
 			if (!whichKeyEnabled) { return; }
 			const prefix = keyBuf;
 			const count = countStr ? parseInt(countStr, 10) : 1;
@@ -176,8 +193,8 @@ export function processKey(token: string, replay = false): void {
 	}
 
 	// Also handle user-defined sub-prefixes not in the hardcoded PREFIX_KEYS set
-	// (e.g. <space>o). If keyBuf matches a prefix action AND has children, open popup.
-	if (hasChildren(map, keyBuf) && !map[keyBuf]) {
+	// (e.g. <space>o). If keyBuf has children but no direct action, open popup.
+	if ((prefixChildren[mode.current]?.has(keyBuf) ?? false) && !map[keyBuf]) {
 		if (whichKeyEnabled) {
 			const prefix = keyBuf;
 			const count = countStr ? parseInt(countStr, 10) : 1;
@@ -199,17 +216,34 @@ export function processKey(token: string, replay = false): void {
 }
 
 // --- config: key remaps live in VS Code settings.json (heli.keybindings) ---
-function applyConfig(): void {
+// Split so a toggle of `heli.enabled`/`heli.whichKey` doesn't rebuild the keymap.
+// `readSettings` is cheap (two booleans); `rebuildKeymap` is the expensive path
+// and only runs when heli.keybindings actually changes.
+function readSettings(): void {
 	const cfg = vscode.workspace.getConfiguration('heli');
 	enabled = cfg.get<boolean>('enabled', true);
 	whichKeyEnabled = cfg.get<boolean>('whichKey', true);
+}
+
+function rebuildKeymap(): void {
+	const cfg = vscode.workspace.getConfiguration('heli');
 	// deep-copy default then layer user remaps from settings.json
 	effectiveKeymap = { normal: { ...keymap.normal }, select: { ...keymap.select }, insert: { ...keymap.insert } };
 	const remaps = cfg.get<Record<string, Record<string, string>>>('keybindings', {});
-	for (const mode of Object.keys(remaps)) {
-		const table = effectiveKeymap[mode];
-		if (table) { Object.assign(table, remaps[mode]); }
+	for (const m of Object.keys(remaps)) {
+		const table = effectiveKeymap[m];
+		if (table) { Object.assign(table, remaps[m]); }
 	}
+	prefixChildren = {
+		normal: computePrefixChildren(effectiveKeymap.normal),
+		select: computePrefixChildren(effectiveKeymap.select),
+		insert: computePrefixChildren(effectiveKeymap.insert),
+	};
+}
+
+function applyConfig(): void {
+	readSettings();
+	rebuildKeymap();
 }
 
 // --- which-key popup -------------------------------------------------------
@@ -411,7 +445,10 @@ export function activate(context: vscode.ExtensionContext): void {
 	// Reapply cursor style when switching editors; reload config on settings change.
 	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => mode.refresh()));
 	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
-		if (e.affectsConfiguration('heli')) { applyConfig(); }
+		// Any heli setting change re-reads the cheap booleans; only a keybindings
+		// change pays for a full keymap + prefix-set rebuild.
+		if (e.affectsConfiguration('heli')) { readSettings(); }
+		if (e.affectsConfiguration('heli.keybindings')) { rebuildKeymap(); }
 	}));
 }
 
