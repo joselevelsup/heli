@@ -729,12 +729,15 @@ function doSearch(ctx: Ctx, forward: boolean): void {
 	if (!forward && !lastSearchMatches) {
 		// Build the full sorted match-index list once. This is the same exec
 		// enumeration the old backward path ran per cursor — just done once and
-		// reused. Zero-width matches are yielded by the engine the same way.
+		// reused. Zero-width matches are skipped (they have no content to select
+		// and would otherwise pin re.lastIndex, looping forever) — same guard as
+		// selectInSelection.
 		lastSearchMatches = [];
 		re.lastIndex = 0;
 		let m: RegExpExecArray | null;
 		while ((m = re.exec(doc)) !== null) {
-			lastSearchMatches.push({ index: m.index, length: m[0].length });
+			if (m[0].length > 0) { lastSearchMatches.push({ index: m.index, length: m[0].length }); }
+			if (m[0].length === 0) { re.lastIndex++; } // advance past zero-width matches
 		}
 	}
 	const matches = lastSearchMatches;
@@ -745,12 +748,16 @@ function doSearch(ctx: Ctx, forward: boolean): void {
 		let hit: { index: number; length: number } | null = null;
 		if (forward) {
 			re.lastIndex = curOff + 1; // search after current position (after the end of current selection)
-			const match = re.exec(doc);
+			// skip zero-width matches: they have no content to select. lastIndex++
+			// advances past them, so this terminates (exec returns null past EOF).
+			let match = re.exec(doc);
+			while (match && match[0].length === 0) { re.lastIndex++; match = re.exec(doc); }
 			if (match) {
 				hit = { index: match.index, length: match[0].length };
 			} else { // wrap around
 				re.lastIndex = 0;
-				const wrap = re.exec(doc);
+				let wrap = re.exec(doc);
+				while (wrap && wrap[0].length === 0) { re.lastIndex++; wrap = re.exec(doc); }
 				if (wrap) { hit = { index: wrap.index, length: wrap[0].length }; }
 			}
 		} else if (matches && matches.length > 0) {

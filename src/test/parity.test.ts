@@ -373,6 +373,44 @@ suite('parity: buffer search wrap & multi-cursor — Phase 0 characterization', 
 	});
 });
 
+// Zero-width regexes (a*, \b, (foo)?, ...) can match the empty string at every
+// position. Without a guard, the backward match-list build loops forever on them
+// (exec returns the same zero-length match without advancing lastIndex). These
+// tests lock the fix: zero-width matches are skipped, so a* finds the actual a
+// runs and a pure-zero-width pattern like \b finds nothing and keeps the cursor.
+suite('parity: buffer search with zero-width regex — issue: hang on /a*/', () => {
+	test('a* does not hang; backward N lands on the previous non-empty a-run', async () => {
+		const ed = await setupDoc('baaab caaab');
+		// offsets: b0 a1 a2 a3 b4 sp5 c6 a7 a8 a9 b10
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		await withInputBox(() => Promise.resolve('/a*/'), async () => {
+			run(ed, 'search_buffer');
+			await settle(ed);
+		});
+		// forward from offset 1 -> greedy 'a*' matches 'aaa' at offset 1 (length 3)
+		assert.equal(ed.selection.start.character, 1);
+		assert.equal(ed.document.getText(ed.selection), 'aaa');
+		// N (backward) triggers the match-list cache build; on the old code this hangs.
+		run(ed, 'search_prev');
+		await settle(ed);
+		// backward from offset 1: no match before it -> wrap to last a-run at offset 7
+		assert.equal(ed.selection.start.character, 7);
+		assert.equal(ed.document.getText(ed.selection), 'aaa');
+	});
+
+	test('pure zero-width regex (\\b) does not hang and keeps the current selection', async () => {
+		const ed = await setupDoc('foo bar');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 1), new vscode.Position(0, 1));
+		const before = ed.selection.active;
+		await withInputBox(() => Promise.resolve('/\\b/'), async () => {
+			run(ed, 'search_buffer');
+			await settle(ed);
+		});
+		// \b only matches zero-width -> all matches skipped -> no hit -> keep selection
+		assert.equal(ed.selection.active.character, before.character);
+	});
+});
+
 suite('parity: select-in-selection (s) — issue #1', () => {
 	test('s creates one selection per regex match within the selection', async () => {
 		const ed = await setupDoc('foo bar baz');
