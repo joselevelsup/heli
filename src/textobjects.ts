@@ -90,31 +90,33 @@ function wordInnerRange(doc: string, i: number, big: boolean): Range {
 }
 
 function paragraphRange(doc: string, i: number, around: boolean): Range | null {
-	const lineCount = doc.split('\n').length;
-	const lineStartOf = (off: number) => {
-		let p = off;
-		while (p > 0 && doc[p - 1] !== '\n') { p--; }
-		return p;
-	};
-	const lineIndexOf = (off: number) => doc.slice(0, off).split('\n').length - 1;
-	const lineIsBlank = (ln: number) => {
-		const lines = doc.split('\n');
-		return ln >= 0 && ln < lines.length && lines[ln].trim() === '';
-	};
-	const li = lineIndexOf(i);
+	// ponytail: previously called doc.split('\n') per line it touched (O(lines²)).
+	// Now split once and derive everything from a prefix-sum of line start offsets.
+	// Offset arithmetic is provably identical to the old lines.slice(0,k).join('\n')
+	// form (prefix[k]-1 == slice(0,k).join length for k>=1; startOff adds the +1 back).
+	const lines = doc.split('\n');
+	const lineCount = lines.length;
+	// prefix[k] = byte offset where line k starts = sum(lineLen[0..k-1]) + k newlines.
+	const prefix = new Array<number>(lineCount + 1);
+	prefix[0] = 0;
+	for (let k = 0; k < lineCount; k++) { prefix[k + 1] = prefix[k] + lines[k].length + 1; }
+	const lineIsBlank = (ln: number) => ln >= 0 && ln < lineCount && lines[ln].trim() === '';
+	// lineIndexOf(i): largest k such that prefix[k] <= i.
+	let li = 0;
+	while (li + 1 < lineCount && prefix[li + 1] <= i) { li++; }
 	if (li < 0 || li >= lineCount) { return null; }
 	let s = li, e = li;
 	const blank = lineIsBlank(li);
 	while (s > 0 && lineIsBlank(s - 1) === blank) { s--; }
 	while (e < lineCount - 1 && lineIsBlank(e + 1) === blank) { e++; }
-	const lines = doc.split('\n');
-	const startOff = lines.slice(0, s).join('\n').length + (s > 0 ? 1 : 0);
-	let endOff = lines.slice(0, e + 1).join('\n').length;
+	// startOff = lines.slice(0,s).join('\n').length + (s>0 ? 1 : 0) = prefix[s] (s>0), 0 (s==0)
+	const startOff = s > 0 ? prefix[s] : 0;
+	// endOff = lines.slice(0, e+1).join('\n').length = prefix[e+1] - 1 (for e+1>=1)
+	let endOff = prefix[e + 1] - 1;
 	if (around) {
 		// include one trailing blank line if present
-		if (e + 1 < lineCount && lineIsBlank(e + 1)) { endOff = lines.slice(0, e + 2).join('\n').length; }
+		if (e + 1 < lineCount && lineIsBlank(e + 1)) { endOff = prefix[e + 2] - 1; }
 	}
-	void lineStartOf;
 	return [startOff, endOff];
 }
 
