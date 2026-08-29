@@ -705,6 +705,12 @@ let lastSearch: { query: string; regex: boolean } | null = null;
 // assignment. Reused across n/N presses so we don't recompile per keystroke. Safe
 // because every code path resets re.lastIndex before use.
 let lastSearchRe: RegExp | null = null;
+// ponytail: cache of all match offsets in the doc for the current lastSearch, built
+// lazily on the first backward search and reused across n/N and multi-cursor.
+// The forward path already starts near the cursor so it stays on re.exec directly.
+// Upgrade path: invalidate on document change too if stale-search-on-edit becomes
+// an issue (currently lastSearch only changes via explicit / search).
+let lastSearchMatches: Array<{ index: number; length: number }> | null = null;
 
 function doSearch(ctx: Ctx, forward: boolean): void {
 	if (!lastSearch) { return; }
@@ -720,37 +726,47 @@ function doSearch(ctx: Ctx, forward: boolean): void {
 	}
 	const re = lastSearchRe;
 
+	if (!forward && !lastSearchMatches) {
+		// Build the full sorted match-index list once. This is the same exec
+		// enumeration the old backward path ran per cursor — just done once and
+		// reused. Zero-width matches are yielded by the engine the same way.
+		lastSearchMatches = [];
+		re.lastIndex = 0;
+		let m: RegExpExecArray | null;
+		while ((m = re.exec(doc)) !== null) {
+			lastSearchMatches.push({ index: m.index, length: m[0].length });
+		}
+	}
+	const matches = lastSearchMatches;
+
 	ed.selections = ed.selections.map(s => {
 		const curOff = ed.document.offsetAt(s.active);
 		const startOff = ed.document.offsetAt(s.start);
-		let match: RegExpExecArray | null;
+		let hit: { index: number; length: number } | null = null;
 		if (forward) {
 			re.lastIndex = curOff + 1; // search after current position (after the end of current selection)
-			match = re.exec(doc);
-			if (!match) { // wrap around
+			const match = re.exec(doc);
+			if (match) {
+				hit = { index: match.index, length: match[0].length };
+			} else { // wrap around
 				re.lastIndex = 0;
-				match = re.exec(doc);
+				const wrap = re.exec(doc);
+				if (wrap) { hit = { index: wrap.index, length: wrap[0].length }; }
 			}
-		} else {
-			// backward: scan all matches before the START of the current selection, take the last
-			re.lastIndex = 0;
-			let last: RegExpExecArray | null = null;
-			while ((match = re.exec(doc)) !== null) {
-				if (match.index >= startOff) { break; }
-				last = match;
+		} else if (matches && matches.length > 0) {
+			// backward: largest match with index < startOff, else wrap to the last.
+			let lo = 0, hi = matches.length;
+			while (lo < hi) {
+				const mid = (lo + hi) >> 1;
+				if (matches[mid].index < startOff) { lo = mid + 1; } else { hi = mid; }
 			}
-			match = last;
-			if (!match) { // wrap around — find the last match in the whole doc
-				re.lastIndex = 0;
-				while ((match = re.exec(doc)) !== null) {
-					last = match;
-				}
-				match = last;
-			}
+			let idx = lo - 1; // last match with index < startOff
+			if (idx < 0) { idx = matches.length - 1; } // wrap to globally-last
+			hit = matches[idx];
 		}
-		if (match) {
-			const start = ed.document.positionAt(match.index);
-			const end = ed.document.positionAt(match.index + match[0].length);
+		if (hit) {
+			const start = ed.document.positionAt(hit.index);
+			const end = ed.document.positionAt(hit.index + hit.length);
 			return new vscode.Selection(start, end); // select the match (Helix select-first)
 		}
 		return s; // no match found, keep current selection
@@ -773,6 +789,7 @@ async function searchBuffer(ctx: Ctx): Promise<void> {
 	}
 	lastSearch = { query: actualQuery, regex };
 	lastSearchRe = null; // invalidate cache; rebuilt lazily in doSearch
+	lastSearchMatches = null; // invalidate backward match list
 	doSearch(ctx, true); // jump to first match immediately
 }
 
