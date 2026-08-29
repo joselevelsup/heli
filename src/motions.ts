@@ -53,11 +53,13 @@ export function nextWordEnd(doc: string, i: number, big: boolean): number {
 	return p;
 }
 
+// ponytail: module-level so matchBracket doesn't allocate a lookup object per call.
+const MATCH_BRACKETS: Record<string, string> = { '(': ')', '[': ']', '{': '}', ')': '(', ']': '[', '}': '{' };
+
 /** Find the matching bracket for the char at `i`, or -1. */
 export function matchBracket(doc: string, i: number): number {
-	const pairs: Record<string, string> = { '(': ')', '[': ']', '{': '}', ')': '(', ']': '[', '}': '{' };
 	const open = doc[i];
-	const close = pairs[open];
+	const close = MATCH_BRACKETS[open];
 	if (!close) {return -1;}
 	const isOpen = '([{'.includes(open);
 	const dir = isOpen ? 1 : -1;

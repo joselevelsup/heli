@@ -696,21 +696,24 @@ const toggleComment = execVsCmd('editor.action.commentLine');
 // ponytail: linear scan per cursor. Fine for normal use; upgrade to a
 // precomputed match list if giant-file search feels slow.
 let lastSearch: { query: string; regex: boolean } | null = null;
+// ponytail: cache the compiled regex; invalidated (set to null) at every lastSearch
+// assignment. Reused across n/N presses so we don't recompile per keystroke. Safe
+// because every code path resets re.lastIndex before use.
+let lastSearchRe: RegExp | null = null;
 
 function doSearch(ctx: Ctx, forward: boolean): void {
 	if (!lastSearch) { return; }
 	const ed = ctx.editor;
 	const doc = ed.document.getText();
-	const flags = lastSearch.regex ? 'g' : 'gi';
-	let pattern: string;
-	if (lastSearch.regex) {
-		pattern = lastSearch.query;
-	} else {
-		pattern = lastSearch.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	if (!lastSearchRe) {
+		const flags = lastSearch.regex ? 'g' : 'gi';
+		const pattern = lastSearch.regex
+			? lastSearch.query
+			: lastSearch.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		try { lastSearchRe = new RegExp(pattern, flags); }
+		catch { return; }
 	}
-	let re: RegExp;
-	try { re = new RegExp(pattern, flags); }
-	catch { return; }
+	const re = lastSearchRe;
 
 	ed.selections = ed.selections.map(s => {
 		const curOff = ed.document.offsetAt(s.active);
@@ -764,6 +767,7 @@ async function searchBuffer(ctx: Ctx): Promise<void> {
 		actualQuery = query.slice(1, -1);
 	}
 	lastSearch = { query: actualQuery, regex };
+	lastSearchRe = null; // invalidate cache; rebuilt lazily in doSearch
 	doSearch(ctx, true); // jump to first match immediately
 }
 

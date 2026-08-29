@@ -5,6 +5,7 @@ import { keymap, descriptions, prettyToken } from './keymap';
 
 let mode: ModeManager;
 let enabled = true;
+let whichKeyEnabled = true; // cached from settings in applyConfig; read on every prefix key
 
 // Effective keymap: default merged with user remaps from settings.json.
 let effectiveKeymap: Record<string, Record<string, string>> = { ...keymap };
@@ -164,8 +165,7 @@ export function processKey(token: string, replay = false): void {
 	if (PREFIX_KEYS.has(keyBuf)) {
 		// `"` just awaits a register name; others open the which-key popup if they have children.
 		if (keyBuf !== '"' && hasChildren(map, keyBuf)) {
-			const cfg = vscode.workspace.getConfiguration('heli');
-			if (!cfg.get<boolean>('whichKey', true)) { return; }
+			if (!whichKeyEnabled) { return; }
 			const prefix = keyBuf;
 			const count = countStr ? parseInt(countStr, 10) : 1;
 			const reg = pendingRegister ?? '"';
@@ -178,8 +178,7 @@ export function processKey(token: string, replay = false): void {
 	// Also handle user-defined sub-prefixes not in the hardcoded PREFIX_KEYS set
 	// (e.g. <space>o). If keyBuf matches a prefix action AND has children, open popup.
 	if (hasChildren(map, keyBuf) && !map[keyBuf]) {
-		const cfg = vscode.workspace.getConfiguration('heli');
-		if (cfg.get<boolean>('whichKey', true)) {
+		if (whichKeyEnabled) {
 			const prefix = keyBuf;
 			const count = countStr ? parseInt(countStr, 10) : 1;
 			const reg = pendingRegister ?? '"';
@@ -203,6 +202,7 @@ export function processKey(token: string, replay = false): void {
 function applyConfig(): void {
 	const cfg = vscode.workspace.getConfiguration('heli');
 	enabled = cfg.get<boolean>('enabled', true);
+	whichKeyEnabled = cfg.get<boolean>('whichKey', true);
 	// deep-copy default then layer user remaps from settings.json
 	effectiveKeymap = { normal: { ...keymap.normal }, select: { ...keymap.select }, insert: { ...keymap.insert } };
 	const remaps = cfg.get<Record<string, Record<string, string>>>('keybindings', {});
