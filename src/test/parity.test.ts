@@ -130,6 +130,50 @@ suite('parity: motions & operators', () => {
 	});
 });
 
+// Phase 0 characterization for Phase 3: lock current paste-at-EOF behavior
+// (the `atEnd` check that decides paste-after vs paste-before the cursor) on
+// documents with and without a trailing newline, so hoisting the doc-length
+// computation out of the per-cursor loop can't drift it.
+suite('parity: paste at EOF — Phase 0 characterization', () => {
+	test('paste_after at EOF without trailing newline inserts after the last char', async () => {
+		const ed = await setupDoc('abc'); // no trailing newline, cursor at offset 3 = atEnd
+		ed.selection = new vscode.Selection(new vscode.Position(0, 3), new vscode.Position(0, 3));
+		// yank a single char so the register holds something small
+		ed.selection = new vscode.Selection(new vscode.Position(0, 2), new vscode.Position(0, 3));
+		run(ed, 'yank');
+		await settle(ed);
+		// cursor at EOF offset 3 -> atEnd true -> paste stays at s.active (inserts after)
+		ed.selection = new vscode.Selection(new vscode.Position(0, 3), new vscode.Position(0, 3));
+		run(ed, 'paste_after');
+		await settle(ed);
+		assert.equal(ed.document.getText(), 'abcc');
+	});
+
+	test('paste_after mid-doc (not atEnd) inserts after the char under cursor', async () => {
+		const ed = await setupDoc('abc');
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 1));
+		run(ed, 'yank'); // register = 'a'
+		await settle(ed);
+		// cursor on 'b' at offset 1 (not atEnd) -> paste at offset 2 (after 'b')
+		ed.selection = new vscode.Selection(new vscode.Position(0, 1), new vscode.Position(0, 1));
+		run(ed, 'paste_after');
+		await settle(ed);
+		assert.equal(ed.document.getText(), 'abac');
+	});
+
+	test('paste_after at EOF with trailing newline inserts at the empty last line', async () => {
+		const ed = await setupDoc('abc\n'); // offset 4 = atEnd (empty last line)
+		ed.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 1));
+		run(ed, 'yank'); // register = 'a'
+		await settle(ed);
+		// cursor on the empty last line at offset 4 -> atEnd true -> paste stays at s.active
+		ed.selection = new vscode.Selection(new vscode.Position(1, 0), new vscode.Position(1, 0));
+		run(ed, 'paste_after');
+		await settle(ed);
+		assert.equal(ed.document.getText(), 'abc\na');
+	});
+});
+
 suite('parity: surround & text objects (Phase 7)', () => {
 	test('surround_add wraps selection with ()', async () => {
 		const ed = await setupDoc('foo bar baz');

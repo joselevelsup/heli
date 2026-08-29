@@ -412,6 +412,11 @@ function pasteOp(ctx: Ctx, before: boolean): void {
 	void getReg(ctx.register).then(reg => {
 		if (!reg.text) {return;}
 		const insertText = reg.text.repeat(ctx.count);
+		// ponytail: hoist doc length once per paste instead of serializing the
+		// whole document inside the per-cursor loop. ed.edit batches inserts so
+		// the document is stable for the lifetime of this callback — the length
+		// can't shift between cursor iterations.
+		const docLen = ed.document.getText().length;
 		void edit(ed, b => {
 			for (const s of ed.selections) {
 				if (reg.linewise) {
@@ -419,7 +424,7 @@ function pasteOp(ctx: Ctx, before: boolean): void {
 					const pos = before ? line.range.start : line.range.end;
 					b.insert(pos, insertText);
 				} else {
-					const atEnd = ed.document.offsetAt(s.active) >= ed.document.getText().length;
+					const atEnd = ed.document.offsetAt(s.active) >= docLen;
 					const pos = before ? s.active : (atEnd ? s.active : s.active.translate(0, 1));
 					b.insert(pos, insertText);
 				}
