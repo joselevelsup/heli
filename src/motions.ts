@@ -6,9 +6,26 @@
 export type CharClass = 'space' | 'word' | 'punct';
 
 export function classify(ch: string | undefined, big: boolean): CharClass {
-	if (ch === undefined || ch === '' || ch === '\n' || ch === '\r' || /\s/.test(ch)) {return 'space';}
-	if (big) {return 'word';}
-	if (/[A-Za-z0-9_]/.test(ch)) {return 'word';}
+	if (ch === undefined || ch === '') { return 'space'; }
+	const code = ch.charCodeAt(0);
+	// ponytail: ASCII fast path (code < 128) avoids per-character regex dispatch in
+	// the word-motion hot loop. Non-ASCII falls back to /\s/.test to preserve the
+	// regex engine's exact Unicode whitespace set (NBSP, em-space, BOM \ufeff,
+	// line/para separators, ideographic space, etc.) — the common ASCII case
+	// stays on char-code ranges. Upgrade path: full Unicode tables if non-ASCII
+	// word motions ever show up as a hotspot.
+	if (code < 128) {
+		// ASCII whitespace matched by /\s/: \t(9) \n(10) \v(11) \f(12) \r(13) space(32)
+		if (code === 32 || (code >= 9 && code <= 13)) { return 'space'; }
+		if (big) { return 'word'; }
+		// [A-Za-z0-9_]: 0-9(48-57) A-Z(65-90) a-z(97-122) _(95)
+		if ((code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95) { return 'word'; }
+		return 'punct';
+	}
+	// Non-ASCII: regex fallback for exact /\s/ Unicode semantics. The word
+	// class is ASCII-only, so non-ASCII non-space is punct (or word in big mode).
+	if (/\s/.test(ch)) { return 'space'; }
+	if (big) { return 'word'; }
 	return 'punct';
 }
 
